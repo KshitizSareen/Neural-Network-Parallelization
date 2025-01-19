@@ -1,4 +1,5 @@
 #include "Weight.h"
+#include "Neuron.h"
 
 Weight::Weight( double weight)
 {
@@ -12,4 +13,10 @@ double Weight::getWeight(){
 void Weight::setWeight(double weight)
 {
     this->weight = weight;
+}
+
+
+void Weight::setChangeInWeightOverCost(double cost)
+{
+    this->changeInWeightOverCost = cost;
 }

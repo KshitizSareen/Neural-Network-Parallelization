@@ -6,22 +6,30 @@ using namespace std;
 
 class Neuron{
     private:
-        double value;
+        double activationValue;
+        double zValue;
         double bias;
 
-        vector<Weight> weights;
+        vector<Weight> forwardWeights;
+        vector<Weight> backwardWeights;
 
 
     public:
-        Neuron(double value,double bias);
-        double getValue();
-        void setValue(double value);
+        Neuron(double activationValue,double zValue,double bias);
+        double getActivationValue();
+        void setActivationValue(double value);
+        double getZValue();
+        void setZValue(double value);
         double getBias();
         void setBias(double bias);
 
-        void addWeight(Weight weight);
+        void addForwardWeight(Weight weight);
 
-        vector<Weight> getWeights();
+        vector<Weight> getForwardWeights();
+
+        void addBackwardWeight(Weight weight);
+
+        vector<Weight> getBackwardWeights();
 };
 
 #endif

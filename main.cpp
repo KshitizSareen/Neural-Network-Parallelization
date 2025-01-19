@@ -81,6 +81,7 @@ std::vector<IrisData> loadIrisDataset(const std::string& filename) {
 
 // Main function
 int main() {
+
     const std::string filename = "/Users/kshitizsareen/C++ Neural Network from Sratch/iris.csv";
     std::vector<IrisData> irisDataset = loadIrisDataset(filename);
 
@@ -96,7 +97,7 @@ int main() {
         cout<<irisDataset[0].features[k]<<" ";
     }
     cout<<endl;
-    for(int i=0;i<1;i++)
+    for(int i=0;i<irisDataset.size();i++)
     {
         network.trainNetwork(irisDataset[i].features);
     }

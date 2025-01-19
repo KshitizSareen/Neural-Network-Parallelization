@@ -3,19 +3,28 @@
 
 using namespace std;
 
-Neuron::Neuron(double value,double bias){
-    this->value = value;
+Neuron::Neuron(double activationValue,double zValue,double bias){
+    this->activationValue = activationValue;
+    this->zValue = zValue;
     this->bias = bias;
 }
 
-double Neuron::getValue(){
-    return value;
+double Neuron::getActivationValue(){
+    return activationValue;
 }
 
-void Neuron::setValue(double value){
-    this->value = value;
+void Neuron::setActivationValue(double value){
+    this->activationValue = value;
 
-    cout<<"New value is "<<this->value<<endl;
+}
+
+double Neuron::getZValue(){
+    return zValue;
+}
+
+void Neuron::setZValue(double value){
+    this->zValue = value;
+
 }
 
 double Neuron::getBias(){
@@ -27,12 +36,21 @@ void Neuron::setBias(double bias)
     this->bias = bias;
 }
 
-void Neuron::addWeight(Weight weight)
+void Neuron::addForwardWeight(Weight weight)
 {
-    weights.push_back(weight);
+    forwardWeights.push_back(weight);
 }
 
-vector<Weight> Neuron::getWeights(){
-    return weights;
+void Neuron::addBackwardWeight(Weight weight)
+{
+    backwardWeights.push_back(weight);
+}
+
+vector<Weight> Neuron::getForwardWeights(){
+    return forwardWeights;
+}
+
+vector<Weight> Neuron::getBackwardWeights(){
+    return backwardWeights;
 }
 

@@ -4,10 +4,12 @@
 class Weight{
     private:
         double weight;
+        double changeInWeightOverCost;
     public:
         Weight(double weight);
         double getWeight();
         void setWeight(double weight);
+        void setChangeInWeightOverCost(double cost);
 
 };
 
