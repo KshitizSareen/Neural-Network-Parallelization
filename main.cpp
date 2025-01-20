@@ -86,21 +86,53 @@ int main() {
     std::vector<IrisData> irisDataset = loadIrisDataset(filename);
 
     Network network;
-    network.setLearningRate(0.5);
+    network.setLearningRate(0.1);
 
     network.AddLayer(4);
     network.AddLayer(5);
     network.AddLayer(5);
     network.AddLayer(3);
 
-    for(int k=0;k<irisDataset[0].features.size();k++)
+    for(int i=0;i<irisDataset.size();i++)
     {
-        cout<<irisDataset[0].features[k]<<" ";
+            auto output=network.getOutput(irisDataset[i].features);
+            for(int j=0;j<output.size();j++)
+            {
+                cout<<output[j]<<" ";
+            }
+            cout<<"Expected is "<<irisDataset[i].labelClassification;
+            cout<<endl;
     }
-    cout<<endl;
-    for(int i=0;i<1;i++)
+    for(int j=0;j<10000;j++)
     {
-        network.trainNetwork(irisDataset[i].features,irisDataset[i].labelClassification);
+        double totalError = 0;
+        for(int i=0;i<irisDataset.size();i++)
+        {
+            network.trainNetwork(irisDataset[i].features,irisDataset[i].labelClassification);
+        }
+        for(int i=0;i<irisDataset.size();i++)
+        {
+            totalError+=network.testNetwork(irisDataset[i].features,irisDataset[i].labelClassification);
+        }
+
+        cout<<"Total Loss is "<<totalError<<"\n";
+        if(totalError<1)
+        {
+            break;
+        }
+
     }
+
+    for(int i=0;i<irisDataset.size();i++)
+    {
+            auto output=network.getOutput(irisDataset[i].features);
+            for(int j=0;j<output.size();j++)
+            {
+                cout<<output[j]<<" ";
+            }
+            cout<<"Expected is "<<irisDataset[i].labelClassification;
+            cout<<endl;
+    }
+
     return 0;
 }

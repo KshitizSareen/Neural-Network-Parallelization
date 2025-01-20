@@ -1,6 +1,7 @@
 #include "Network.h"
 #include "iostream"
 #include <cmath>
+#include "memory"
 
 using namespace std;
 
@@ -15,49 +16,46 @@ double Network::sigmoidDerivativeValue(double input)
 
 double Network::costDerivativeValue(double predictedValue,double outputValue,int numberOfOutputs)
 {
-    cout<<"Predicted Value is "<<predictedValue<<" ,Output Value is "<<outputValue<<" ,number of outputs is "<<numberOfOutputs<<"\n";
     return (predictedValue-outputValue)/numberOfOutputs;
 }
 
-double Network::calculateErrorForLastNeuron(Neuron neuron,double outputValue,int numberOfOutputs)
+double Network::calculateErrorForLastNeuron(shared_ptr<Neuron> neuron,double outputValue,int numberOfOutputs)
 {
-    double sigmoidDerivative = sigmoidDerivativeValue(neuron.getZValue());
-    cout<<"Sigmoid value is "<<sigmoidDerivative<<"\n";
-    cout<<"Activation value is "<<neuron.getActivationValue()<<"\n";
-    double costDerivative = costDerivativeValue(neuron.getActivationValue(),outputValue,numberOfOutputs);
-    cout<<"Cost value is "<<costDerivative<<"\n";
-    cout<<"Error value is "<<sigmoidDerivative*costDerivative<<"\n";
+    double sigmoidDerivative = sigmoidDerivativeValue(neuron->getZValue());
+    double costDerivative = costDerivativeValue(neuron->getActivationValue(),outputValue,numberOfOutputs);
     return sigmoidDerivative*costDerivative;
 }
 
-double Network::calculateErrorForHiddenLayer(Neuron neuron)
+double Network::calculateErrorForHiddenLayer(shared_ptr<Neuron> neuron)
 {
-    double sigmoidDerivative = sigmoidDerivativeValue(neuron.getZValue());
+    double sigmoidDerivative = sigmoidDerivativeValue(neuron->getZValue());
     double sumErrorOfNextLayer = 0;
-    vector<Weight> weights = neuron.getForwardWeights();
-    for(int i=0;i<neuron.getForwardWeights().size();i++)
+    vector<shared_ptr<Weight>> weights = neuron->getForwardWeights();
+    for(int i=0;i<weights.size();i++)
     {
-        Weight weight = weights[i];
-        int neuronLayer = weight.getNextNeuronLayer();
-        int neuronIndex = weight.getNextNeuronIndex();
-        Neuron neuron = layers[neuronLayer][neuronIndex];
-        sumErrorOfNextLayer+=neuron.getError()*weight.getWeight();
+        shared_ptr<Weight> weight = weights[i];
+        int neuronLayer = weight->getNextNeuronLayer();
+        int neuronIndex = weight->getNextNeuronIndex();
+        shared_ptr<Neuron> neuron = layers[neuronLayer][neuronIndex];
+        sumErrorOfNextLayer+=neuron->getError()*weight->getWeight();
     }
     return sigmoidDerivative*sumErrorOfNextLayer;
 
 }
 
-void Network::adjustWeight(double error,Weight &weight,double learningRate)
+void Network::adjustWeight(double error,shared_ptr<Weight> weight,double learningRate)
 {
-        int neuronLayer = weight.getPrevNeuronLayer();
-        int neuronIndex = weight.getPrevNeuronIndex();
-        Neuron neuron = layers[neuronLayer][neuronIndex];
-        double changeInCostOverWeight = error*neuron.getActivationValue();
-        cout<<"Error is adjust weight is "<<error<<"\n";
-        cout<<"Activation is adjust weight is "<<neuron.getActivationValue()<<"\n";
-        cout<<"Change in cost over weight is adjust weight is "<<changeInCostOverWeight<<"\n";
-        cout<<"Change is adjust weight is "<<learningRate*changeInCostOverWeight<<"\n";
-        weight.setChangeInWeight(learningRate*changeInCostOverWeight);
+        int neuronLayer = weight->getPrevNeuronLayer();
+        int neuronIndex = weight->getPrevNeuronIndex();
+        shared_ptr<Neuron> neuron = layers[neuronLayer][neuronIndex];
+        double changeInCostOverWeight = error*neuron->getActivationValue();
+        weight->setChangeInWeight(learningRate*changeInCostOverWeight);
+}
+
+void Network::adjustBias(double error,shared_ptr<Neuron> neuron)
+{
+        double changeInCostOverBias = error;
+        neuron->setChangeInBias(learningRate*changeInCostOverBias);
 }
 
 double Network::getLearningRate()  {
@@ -71,149 +69,160 @@ void Network::setLearningRate(double learningRate) {
 
 void Network::AddLayer(int numberOfNeurons)
 {
-    vector<Neuron> neurons;
+    vector<shared_ptr<Neuron>> neurons;
     for(int i=0;i<numberOfNeurons;i++)
     {
-        Neuron neuron = Neuron(i%2==0 ? 0 : 1,i%2==0 ? 0 : 1,i%2==0 ? 1 : 0);
+        shared_ptr<Neuron> neuron = make_shared<Neuron>(i%2==0 ? 0 : 1,i%2==0 ? 0 : 1,0.5);
         neurons.push_back(neuron);
     }
     layers.push_back(neurons);
 
     if(layers.size()>1)
     {
-        vector<Neuron>& lastLayer = layers[layers.size()-2];
-        vector<Neuron>& currentLayer = layers[layers.size()-1];
+        vector<shared_ptr<Neuron>> lastLayer = layers[layers.size()-2];
+        vector<shared_ptr<Neuron>> currentLayer = layers[layers.size()-1];
 
         for(int i=0;i<lastLayer.size();i++)
         {
             for(int j=0;j<numberOfNeurons;j++)
             {
-                Weight weight = Weight(j%2==0 ? 0 : 1);
-                weight.setPrevNeuronLayer(layers.size()-2);
-                weight.setNextNeuronLayer(layers.size()-1);
-                weight.setPrevNeuronIndex(i);
-                weight.setNextNeuronIndex(j);
-                lastLayer[i].addForwardWeight(weight);
-                currentLayer[j].addBackwardWeight(weight);
+                shared_ptr<Weight> weight = make_shared<Weight>(0.5);
+                weight->setPrevNeuronLayer(layers.size()-2);
+                weight->setNextNeuronLayer(layers.size()-1);
+                weight->setPrevNeuronIndex(i);
+                weight->setNextNeuronIndex(j);
+                lastLayer[i]->addForwardWeight(weight);
+                currentLayer[j]->addBackwardWeight(weight);
             }
         }
     }
 }
 
-void Network::trainNetwork(vector<double> input,double outputValue)
-{
-    cout<<endl;
-    vector<Neuron> &firstLayer = layers.front();
-    for(int i=0;i<firstLayer.size();i++){
-        (firstLayer[i]).setZValue(input[i]);
-        (firstLayer[i]).setActivationValue(input[i]);
+void Network::initializeLayerInput(const vector<double>& input) {
+    vector<shared_ptr<Neuron>> firstLayer = layers.front();
+    for (size_t i = 0; i < firstLayer.size(); ++i) {
+        firstLayer[i]->setZValue(input[i]);
+        firstLayer[i]->setActivationValue(input[i]);
     }
+}
 
-    for(int i=1;i<layers.size();i++)
-    {
-        vector<Neuron> &currentLayer = layers[i];
-        vector<Neuron> &prevLayer = layers[i-1];
-        MatrixXd biasMatrix(currentLayer.size(),1);
-        for(int j=0;j<currentLayer.size();j++)
-        {
-            biasMatrix(j,0) = currentLayer[j].getBias();
-        }
-        cout<<"Bias matrix is "<<biasMatrix<<"\n";
-        MatrixXd weightMatrix(currentLayer.size(),prevLayer.size());
-        for(int j=0;j<prevLayer.size();j++)
-        {
-            vector<Weight> weights = prevLayer.at(j).getForwardWeights();
-            for(int k=0;k<weights.size();k++)
-            {
-                weightMatrix(k,j) = weights.at(k).getWeight();
-            }
-        }
-        cout<<"Weight matrix is "<<weightMatrix<<"\n";
-
-
-        MatrixXd activationValues(prevLayer.size(),1);
-
-        for(int i=0;i<prevLayer.size();i++)
-        {
-            activationValues(i,0) = prevLayer[i].getActivationValue();
-        }
-        cout<<"\n";
-        cout<<"Activation Values are: "<<activationValues<<endl;
-
-        MatrixXd newActivationValues = (weightMatrix*activationValues)+biasMatrix;
-
-        for(int i=0;i<currentLayer.size();i++)
-        {
-            currentLayer[i].setZValue(newActivationValues(i,0));
-            currentLayer[i].setActivationValue(sigmoid(newActivationValues(i,0)));
-        }
-
-        cout<<"New Activation Values "<<newActivationValues<<endl;
-    }
-
-    vector<Neuron> &backLayer = layers.back();
-    cout<<"Errors for last layer are"<<"\n";
-    for(int i=0;i<backLayer.size();i++){
-        Neuron& neuron = backLayer[i];
-        double error = calculateErrorForLastNeuron(neuron,outputValue == i ? 1 : 0,backLayer.size());
-        neuron.setError(error);
-        cout<<neuron.getError()<<" ";
-        vector<Weight> backwardWeights = neuron.getBackwardWeights();
-        for(int j=0;j<backwardWeights.size();j++)
-        {
-            Weight &weight = backwardWeights[j];
-            adjustWeight(error,weight,learningRate);
-            cout<<"Change in weight is "<<weight.getChangeInWeight()<<"\n";
+MatrixXd Network::calculateWeightMatrix(const vector<shared_ptr<Neuron>>& prevLayer) {
+    MatrixXd weightMatrix(prevLayer.front()->getForwardWeights().size(), prevLayer.size());
+    for (size_t j = 0; j < prevLayer.size(); ++j) {
+        vector<shared_ptr<Weight>> weights = prevLayer[j]->getForwardWeights();
+        for (size_t k = 0; k < weights.size(); ++k) {
+            weightMatrix(k, j) = weights[k]->getWeight();
         }
     }
-    cout<<"\n";
+    return weightMatrix;
+}
 
-/*
-    for(int i=layers.size()-2;i>=1;i--)
-    {
-        vector<Neuron> &currentLayer = layers[i];
-        for(int j=0;j<currentLayer.size();j++)
-        {
-            Neuron& neuron = currentLayer[j];
+MatrixXd Network::calculateBiasMatrix(const vector<shared_ptr<Neuron>>& currentLayer) {
+    MatrixXd biasMatrix(currentLayer.size(), 1);
+    for (size_t j = 0; j < currentLayer.size(); ++j) {
+        biasMatrix(j, 0) = currentLayer[j]->getBias();
+    }
+    return biasMatrix;
+}
+
+MatrixXd Network::getActivationValues(const vector<shared_ptr<Neuron>>& layer) {
+    MatrixXd activationValues(layer.size(), 1);
+    for (size_t i = 0; i < layer.size(); ++i) {
+        activationValues(i, 0) = layer[i]->getActivationValue();
+    }
+    return activationValues;
+}
+
+void Network::forwardPropagate() {
+    for (size_t i = 1; i < layers.size(); ++i) {
+        vector<shared_ptr<Neuron>> currentLayer = layers[i];
+        vector<shared_ptr<Neuron>> prevLayer = layers[i - 1];
+        
+        MatrixXd weightMatrix = calculateWeightMatrix(prevLayer);
+        MatrixXd biasMatrix = calculateBiasMatrix(currentLayer);
+        MatrixXd activationValues = getActivationValues(prevLayer);
+        MatrixXd newActivationValues = (weightMatrix * activationValues) + biasMatrix;
+
+        for (size_t j = 0; j < currentLayer.size(); ++j) {
+            currentLayer[j]->setZValue(newActivationValues(j, 0));
+            currentLayer[j]->setActivationValue(sigmoid(newActivationValues(j, 0)));
+        }
+    }
+}
+
+void Network::backwardPropagate(double outputValue) {
+    // Handle the last layer separately
+    vector<shared_ptr<Neuron>> backLayer = layers.back();
+    for (size_t i = 0; i < backLayer.size(); ++i) {
+        shared_ptr<Neuron> neuron = backLayer[i];
+        double error = calculateErrorForLastNeuron(neuron, outputValue == i ? 1 : 0, backLayer.size());
+        neuron->setError(error);
+        adjustWeightsAndBiases(neuron, error);
+    }
+
+    // Handle hidden layers
+    for (int i = layers.size() - 2; i >= 1; --i) {
+        vector<shared_ptr<Neuron>> currentLayer = layers[i];
+        for (shared_ptr<Neuron>& neuron : currentLayer) {
             double error = calculateErrorForHiddenLayer(neuron);
-            vector<Weight> backwardWeights = neuron.getBackwardWeights();
-            for(int j=0;j<backwardWeights.size();j++)
-            {
-                Weight weight = backwardWeights[j];
-                adjustWeight(error,weight,learningRate);
-            }
+            neuron->setError(error);
+            adjustWeightsAndBiases(neuron, error);
         }
     }
-    */
-
-    for(int i=layers.size()-2;i<layers.size()-1;i++)
-    {
-        cout<<"Weights for layers "<<i<<" are \n";
-        vector<Neuron> &currentLayer = layers[i];
-        for(int j=0;j<currentLayer.size();j++)
-        {
-            Neuron& neuron = currentLayer[j];
-            vector<Weight> forwardWeights = neuron.getForwardWeights();
-            for(int j=0;j<forwardWeights.size();j++)
-            {
-                Weight &weight = forwardWeights[j];
-                weight.setWeight(weight.getWeight()-weight.getChangeInWeight());
-                cout<<"Change is weight is "<<weight.getChangeInWeight()<<" "<<"New weight is "<<weight.getWeight()<<"\n";
-            }
-        }
-        cout<<endl;
-    }
-
-
-
-    
-
-
-    cout<<"Training cycle completed"<<endl;
 }
 
+void Network::adjustWeightsAndBiases(shared_ptr<Neuron>& neuron, double error) {
+    vector<shared_ptr<Weight>> backwardWeights = neuron->getBackwardWeights();
+    for (shared_ptr<Weight>& weight : backwardWeights) {
+        adjustWeight(error, weight, learningRate);
+    }
+    adjustBias(error, neuron);
+}
 
+void Network::updateWeightsAndBiases() {
+    for (vector<shared_ptr<Neuron>>& layer : layers) {
+        for (shared_ptr<Neuron>& neuron : layer) {
+            vector<shared_ptr<Weight>> forwardWeights = neuron->getForwardWeights();
+            for (shared_ptr<Weight>& weight : forwardWeights) {
+                weight->setWeight(weight->getWeight() - weight->getChangeInWeight());
+            }
+            neuron->setBias(neuron->getBias() - neuron->getChangeInBias());
+        }
+    }
+}
+
+void Network::trainNetwork(vector<double> input, double outputValue) {
+    initializeLayerInput(input);
+    forwardPropagate();
+    backwardPropagate(outputValue);
+    updateWeightsAndBiases();
+}
+
+double Network::testNetwork(vector<double> input, double outputValue) {
+    initializeLayerInput(input);
+    forwardPropagate();
+
+    vector<shared_ptr<Neuron>> backLayer = layers.back();
+    double totalError = 0.0;
+    for (size_t i = 0; i < backLayer.size(); ++i) {
+        double error = pow((backLayer[i]->getActivationValue() - (outputValue == i ? 1 : 0)), 2);
+        totalError += error;
+    }
+    return (1.0 / (2.0 * backLayer.size())) * totalError;
+}
+
+vector<double> Network::getOutput(vector<double> input) {
+    initializeLayerInput(input);
+    forwardPropagate();
+
+    vector<shared_ptr<Neuron>> backLayer = layers.back();
+    vector<double> output;
+    for (const shared_ptr<Neuron>& neuron : backLayer) {
+        output.push_back(neuron->getActivationValue());
+    }
+    return output;
+}
 
 Network::Network(){
-
+    
 }

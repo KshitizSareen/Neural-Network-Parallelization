@@ -36,21 +36,21 @@ void Neuron::setBias(double bias)
     this->bias = bias;
 }
 
-void Neuron::addForwardWeight(Weight &weight)
+void Neuron::addForwardWeight(shared_ptr<Weight> weight)
 {
     forwardWeights.push_back(weight);
 }
 
-void Neuron::addBackwardWeight(Weight &weight)
+void Neuron::addBackwardWeight(shared_ptr<Weight> weight)
 {
     backwardWeights.push_back(weight);
 }
 
-vector<Weight> Neuron::getForwardWeights(){
+vector<shared_ptr<Weight>> Neuron::getForwardWeights(){
     return forwardWeights;
 }
 
-vector<Weight> Neuron::getBackwardWeights(){
+vector<shared_ptr<Weight>> Neuron::getBackwardWeights(){
     return backwardWeights;
 }
 
@@ -60,4 +60,11 @@ void Neuron::setError(double error){
 
 double Neuron::getError(){
     return this->error;
+}
+
+double Neuron::getChangeInBias(){
+    return this->changeInBias;
+}
+void Neuron::setChangeInBias(double bias){
+    this->changeInBias = bias;
 }

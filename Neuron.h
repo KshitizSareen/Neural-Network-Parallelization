@@ -2,6 +2,7 @@
 #define NEURON_H
 #include "Weight.h"
 #include "vector"
+#include "memory"
 using namespace std;
 
 class Neuron{
@@ -10,9 +11,10 @@ class Neuron{
         double zValue;
         double bias;
         double error;
+        double changeInBias;
 
-        vector<Weight> forwardWeights;
-        vector<Weight> backwardWeights;
+        vector<shared_ptr<Weight>> forwardWeights;
+        vector<shared_ptr<Weight>> backwardWeights;
 
 
     public:
@@ -25,14 +27,16 @@ class Neuron{
         void setBias(double bias);
         void setError(double error);
         double getError();
+        double getChangeInBias();
+        void setChangeInBias(double bias);
 
-        void addForwardWeight(Weight &weight);
+        void addForwardWeight(shared_ptr<Weight> weight);
 
-        vector<Weight> getForwardWeights();
+        vector<shared_ptr<Weight>> getForwardWeights();
 
-        void addBackwardWeight(Weight &weight);
+        void addBackwardWeight(shared_ptr<Weight>weight);
 
-        vector<Weight> getBackwardWeights();
+        vector<shared_ptr<Weight>> getBackwardWeights();
 };
 
 #endif
