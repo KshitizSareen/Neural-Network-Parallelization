@@ -4,13 +4,26 @@
 class Weight{
     private:
         double weight;
-        double changeInWeightOverCost;
+        double changeInWeight;
+        int prevNeuronLayer;
+        int nextNeuronLayer;
+        int prevNeuronIndex;
+        int nextNeuronIndex;
+
     public:
         Weight(double weight);
         double getWeight();
         void setWeight(double weight);
-        void setChangeInWeightOverCost(double cost);
-
+        void setChangeInWeight(double change);
+        void setPrevNeuronLayer(int prevNeuronLayer);
+        void setNextNeuronLayer(int nextNeuronLayer);
+        void setPrevNeuronIndex(int prevNeuronLayer);
+        void setNextNeuronIndex(int nextNeuronLayer);
+        int getPrevNeuronLayer();
+        int getNextNeuronLayer();
+        int getPrevNeuronIndex();
+        int getNextNeuronIndex();
+        double getChangeInWeight();
 };
 
 #endif

@@ -36,12 +36,12 @@ void Neuron::setBias(double bias)
     this->bias = bias;
 }
 
-void Neuron::addForwardWeight(Weight weight)
+void Neuron::addForwardWeight(Weight &weight)
 {
     forwardWeights.push_back(weight);
 }
 
-void Neuron::addBackwardWeight(Weight weight)
+void Neuron::addBackwardWeight(Weight &weight)
 {
     backwardWeights.push_back(weight);
 }
@@ -54,3 +54,10 @@ vector<Weight> Neuron::getBackwardWeights(){
     return backwardWeights;
 }
 
+void Neuron::setError(double error){
+    this->error = error;
+}
+
+double Neuron::getError(){
+    return this->error;
+}

@@ -86,6 +86,7 @@ int main() {
     std::vector<IrisData> irisDataset = loadIrisDataset(filename);
 
     Network network;
+    network.setLearningRate(0.5);
 
     network.AddLayer(4);
     network.AddLayer(5);
@@ -97,9 +98,9 @@ int main() {
         cout<<irisDataset[0].features[k]<<" ";
     }
     cout<<endl;
-    for(int i=0;i<irisDataset.size();i++)
+    for(int i=0;i<1;i++)
     {
-        network.trainNetwork(irisDataset[i].features);
+        network.trainNetwork(irisDataset[i].features,irisDataset[i].labelClassification);
     }
     return 0;
 }

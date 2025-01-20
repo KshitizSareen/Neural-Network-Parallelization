@@ -9,6 +9,7 @@ class Neuron{
         double activationValue;
         double zValue;
         double bias;
+        double error;
 
         vector<Weight> forwardWeights;
         vector<Weight> backwardWeights;
@@ -22,12 +23,14 @@ class Neuron{
         void setZValue(double value);
         double getBias();
         void setBias(double bias);
+        void setError(double error);
+        double getError();
 
-        void addForwardWeight(Weight weight);
+        void addForwardWeight(Weight &weight);
 
         vector<Weight> getForwardWeights();
 
-        void addBackwardWeight(Weight weight);
+        void addBackwardWeight(Weight &weight);
 
         vector<Weight> getBackwardWeights();
 };
