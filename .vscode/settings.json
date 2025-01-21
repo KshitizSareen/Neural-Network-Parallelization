@@ -72,6 +72,9 @@
         "iostream": "cpp",
         "fstream": "cpp",
         "deque": "cpp",
-        "map": "cpp"
+        "map": "cpp",
+        "__tree": "cpp",
+        "bitset": "cpp",
+        "set": "cpp"
     }
 }
