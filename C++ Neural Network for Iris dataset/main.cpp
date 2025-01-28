@@ -87,14 +87,14 @@ int main() {
     std::vector<IrisData> irisDataset = loadIrisDataset(filename);
 
     Network network;
-    network.setLearningRate(0.1);
+    network.setLearningRate(0.5);
 
     network.AddLayer(4);
     network.AddLayer(5);
     network.AddLayer(5);
     network.AddLayer(3);
 
-    for(int j=0;j<1;j++)
+    for(int j=0;j<10000;j++)
     {
         double totalError = 0;
         for(int i=0;i<irisDataset.size();i++)
@@ -108,21 +108,21 @@ int main() {
         
             // Calculate the duration
             auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
-            /*
+            
             // Print the duration
-            std::cout << "Execution Time: " << duration.count() << " ms" << std::endl;
-            */
+            //std::cout << "Execution Time: " << duration.count() << " ms" << std::endl;
         }
-        /*for(int i=0;i<irisDataset.size();i++)
+        for(int i=0;i<irisDataset.size();i++)
         {
             totalError+=network.testNetwork(irisDataset[i].features,irisDataset[i].labelClassification);
         }
-
+        cout<<"number of epochs are "<<j<<"\n";
         cout<<"Total Loss is "<<totalError<<"\n";
         if(totalError<1)
         {
+            cout<<"Total number of epochs are "<<j<<"\n";
             break;
-        }*/
+        }
 
     }
 
