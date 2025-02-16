@@ -10,7 +10,7 @@ class Neuron{
         double activationValue;
         double zValue;
         double bias;
-        double error;
+        double error = 0;
         double changeInBias;
 
         vector<shared_ptr<Weight>> forwardWeights;

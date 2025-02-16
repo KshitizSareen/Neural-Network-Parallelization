@@ -83,15 +83,23 @@ std::vector<IrisData> loadIrisDataset(const std::string& filename) {
 // Main function
 int main() {
 
-    const std::string filename = "iris.csv";
+
+    std::string filename = "output_sequantial.csv";
+
+    // Open file in write mode
+    std::ofstream file(filename);
+
+    file.clear();
+
+    filename = "iris.csv";
     std::vector<IrisData> irisDataset = loadIrisDataset(filename);
 
     Network network;
     network.setLearningRate(0.5);
 
     network.AddLayer(4);
-    network.AddLayer(5);
-    network.AddLayer(5);
+    network.AddLayer(1000);
+    network.AddLayer(1000);
     network.AddLayer(3);
 
     for(int j=0;j<10000;j++)
@@ -110,7 +118,7 @@ int main() {
             auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
             
             // Print the duration
-            //std::cout << "Execution Time: " << duration.count() << " ms" << std::endl;
+            std::cout << "Execution Time: " << duration.count() << " ms" << " For iteration "<<i<<endl;
         }
         for(int i=0;i<irisDataset.size();i++)
         {
@@ -118,6 +126,9 @@ int main() {
         }
         cout<<"number of epochs are "<<j<<"\n";
         cout<<"Total Loss is "<<totalError<<"\n";
+        file <<j;
+        file<<","<<totalError;
+        file<<"\n";
         if(totalError<1)
         {
             cout<<"Total number of epochs are "<<j<<"\n";

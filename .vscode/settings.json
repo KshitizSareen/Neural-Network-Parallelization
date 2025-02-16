@@ -75,6 +75,10 @@
         "map": "cpp",
         "__tree": "cpp",
         "bitset": "cpp",
-        "set": "cpp"
+        "set": "cpp",
+        "complex": "cpp",
+        "execution": "cpp",
+        "numeric": "cpp",
+        "numbers": "cpp"
     }
 }

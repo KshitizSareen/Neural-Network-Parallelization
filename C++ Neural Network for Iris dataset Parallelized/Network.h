@@ -9,9 +9,12 @@ using namespace std;
 class Network{
     private:
         vector<vector<shared_ptr<Neuron>>> layers;
+        vector<shared_ptr<Weight>> weights;
         double learningRate;
     public:
-        Network();
+        Network(){
+            
+        }
         void AddLayer(int numberOfNeurons);
 
         void initializeLayerInput(const vector<double> &input);
@@ -26,7 +29,7 @@ class Network{
 
         void backwardPropagate(double outputValue);
 
-        void adjustWeightsAndBiases(shared_ptr<Neuron> &neuron, double error);
+        void adjustWeightsAndBiases();
 
         void updateWeightsAndBiases();
 
@@ -40,7 +43,7 @@ class Network{
 
         double costDerivativeValue(double predictedValue,double outputValue,int numberOfOutputs);
 
-        double calculateErrorForLastNeuron(shared_ptr<Neuron> neuron,double outputValue,int numberOfOutputs);
+        void calculateErrorForLastLayer(vector<shared_ptr<Neuron>> neurons,int numberOfOutputs,int outputValue);
 
         void adjustWeight(double errorValue,shared_ptr<Weight> weight,double learningRate);
 
@@ -50,7 +53,7 @@ class Network{
 
         void setLearningRate(double learningRate);
 
-        double calculateErrorForHiddenLayer(shared_ptr<Neuron> neuron);
+        void calculateErrorForHiddenLayer(vector<shared_ptr<Neuron>> neurons);
 };
 
 #endif

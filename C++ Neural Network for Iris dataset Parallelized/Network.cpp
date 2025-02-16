@@ -22,35 +22,46 @@ double Network::costDerivativeValue(double predictedValue,double outputValue,int
     return (predictedValue-outputValue)/numberOfOutputs;
 }
 
-double Network::calculateErrorForLastNeuron(shared_ptr<Neuron> neuron,double outputValue,int numberOfOutputs)
+void Network::calculateErrorForLastLayer(vector<shared_ptr<Neuron>> neurons, int numberOfOutputs, int outputValue)
 {
-    double sigmoidDerivative = sigmoidDerivativeValue(neuron->getZValue());
-    double costDerivative = costDerivativeValue(neuron->getActivationValue(),outputValue,numberOfOutputs);
-    return sigmoidDerivative*costDerivative;
-}
-
-double Network::calculateErrorForHiddenLayer(shared_ptr<Neuron> neuron)
-{
-    double sigmoidDerivative = sigmoidDerivativeValue(neuron->getZValue());
-    double sumErrorOfNextLayer = 0;
-    vector<shared_ptr<Weight>> weights = neuron->getForwardWeights();
-
-    #pragma omp single 
-    {
-        #pragma omp taskloop shared(sumErrorOfNextLayer)
-        for(int i=0;i<weights.size();i++)
-        {
-            shared_ptr<Weight> weight = weights[i];
-            int neuronLayer = weight->getNextNeuronLayer();
-            int neuronIndex = weight->getNextNeuronIndex();
-            shared_ptr<Neuron> neuron = layers[neuronLayer][neuronIndex];
-            #pragma omp critical
-            sumErrorOfNextLayer+=neuron->getError()*weight->getWeight();
-        }
+    #pragma omp parallel for
+    for (size_t i = 0; i < neurons.size(); ++i) {
+        shared_ptr<Neuron> neuron = neurons[i];
+        double sigmoidDerivative = sigmoidDerivativeValue(neuron->getZValue());
+        double costDerivative = costDerivativeValue(neuron->getActivationValue(), outputValue == i ? 1 : 0, numberOfOutputs);
+        neuron->setError(sigmoidDerivative * costDerivative);
     }
-    return sigmoidDerivative*sumErrorOfNextLayer;
-
 }
+
+
+void Network::calculateErrorForHiddenLayer(vector<shared_ptr<Neuron>> neurons)
+{
+    int numWeights = neurons[0]->getForwardWeights().size();
+    int totalConnections = neurons.size()*numWeights;
+    long double errors[neurons.size()] = {0.0};
+
+    #pragma omp parallel for 
+    for (int index = 0; index < totalConnections; ++index) {
+        int i = index / numWeights;
+        int j = index % numWeights;
+        shared_ptr<Neuron> neuron = neurons[i];
+        shared_ptr<Weight> weight = neuron->getForwardWeights()[j];
+        int neuronLayer = weight->getNextNeuronLayer();
+        int neuronIndex = weight->getNextNeuronIndex();
+        shared_ptr<Neuron> nextNeuron = layers[neuronLayer][neuronIndex];
+        #pragma omp atomic
+        errors[i] += nextNeuron->getError() * weight->getWeight();
+    }
+
+    #pragma omp parallel for 
+    for(int i=0;i<neurons.size();i++)
+    {
+        shared_ptr<Neuron> neuron = neurons[i];
+        double sigmoidDerivative = sigmoidDerivativeValue(neuron->getZValue());  
+        neuron->setError(sigmoidDerivative *errors[i]);
+    }
+}
+
 
 void Network::adjustWeight(double error,shared_ptr<Weight> weight,double learningRate)
 {
@@ -102,23 +113,21 @@ void Network::AddLayer(int numberOfNeurons)
                 weight->setNextNeuronIndex(j);
                 lastLayer[i]->addForwardWeight(weight);
                 currentLayer[j]->addBackwardWeight(weight);
+                weights.push_back(weight);
             }
         }
     }
 }
 
+
 void Network::initializeLayerInput(const vector<double>& input) {
     vector<shared_ptr<Neuron>> firstLayer = layers.front();
-    int max_threads = min((int)input.size(),omp_get_max_threads());
-    int chunkSize = input.size()/max_threads;
-    #pragma omp parallel num_threads(max_threads)
-    {
-        int currentThread = omp_get_thread_num();
-        for (size_t i = currentThread*chunkSize; i < min((int)input.size(),(currentThread+1)*chunkSize); ++i) {
+
+        #pragma omp parallel for
+        for (size_t i =0; i < input.size(); ++i) {
             firstLayer[i]->setZValue(input[i]);
             firstLayer[i]->setActivationValue(input[i]);
         }
-    }
 
     /*
     for(int i=0;i<input.size();i++)
@@ -129,150 +138,138 @@ void Network::initializeLayerInput(const vector<double>& input) {
 }
 
 MatrixXd Network::calculateWeightMatrix(const vector<shared_ptr<Neuron>>& prevLayer) {
+    size_t rows = prevLayer.front()->getForwardWeights().size();
+    size_t cols = prevLayer.size();
 
-    MatrixXd weightMatrix(prevLayer.front()->getForwardWeights().size(), prevLayer.size());
-    for (size_t j = 0; j < prevLayer.size(); ++j) {
-        vector<shared_ptr<Weight>> weights = prevLayer[j]->getForwardWeights();
-        for (size_t k = 0; k < weights.size(); ++k) {
-            weightMatrix(k, j) = weights[k]->getWeight();
-        }
+    MatrixXd weightMatrix(rows, cols);
+
+    // Flattened single loop
+    #pragma omp parallel for  // OpenMP for parallelization (optional)
+    for (size_t index = 0; index < rows * cols; ++index) {
+        size_t j = index % cols;  // Column index
+        size_t k = index / cols;  // Row index
+        weightMatrix(k, j) = prevLayer[j]->getForwardWeights()[k]->getWeight();
     }
+
     return weightMatrix;
 }
 
+
 MatrixXd Network::calculateBiasMatrix(const vector<shared_ptr<Neuron>>& currentLayer) {
     MatrixXd biasMatrix(currentLayer.size(), 1);
+    
+    #pragma omp parallel for
     for (size_t j = 0; j < currentLayer.size(); ++j) {
         biasMatrix(j, 0) = currentLayer[j]->getBias();
     }
+    
     return biasMatrix;
 }
 
 MatrixXd Network::getActivationValues(const vector<shared_ptr<Neuron>>& layer) {
     MatrixXd activationValues(layer.size(), 1);
+    
+    #pragma omp parallel for
     for (size_t i = 0; i < layer.size(); ++i) {
         activationValues(i, 0) = layer[i]->getActivationValue();
     }
+    
     return activationValues;
 }
-
 void Network::forwardPropagate() {
-    #pragma omp parallel
-    {
-        #pragma omp single
-        {
-            for (size_t i = 1; i < layers.size(); ++i) {
-                vector<shared_ptr<Neuron>> currentLayer = layers[i];
-                vector<shared_ptr<Neuron>> prevLayer = layers[i - 1];
+    for (size_t i = 1; i < layers.size(); ++i) {
+        vector<shared_ptr<Neuron>> currentLayer = layers[i];
+        vector<shared_ptr<Neuron>> prevLayer = layers[i - 1];
+        MatrixXd weightMatrix;
+        MatrixXd biasMatrix;
+        MatrixXd activationValues;
 
-                // Allocate memory for dependency-tracked variables
-                auto weightMatrix = new MatrixXd();
-                auto biasMatrix = new MatrixXd();
-                auto activationValues = new MatrixXd();
+        MatrixXd newActivationValues;
+        weightMatrix = calculateWeightMatrix(prevLayer);
+        
+        biasMatrix = calculateBiasMatrix(currentLayer);
+    
+        activationValues = getActivationValues(prevLayer);
+        newActivationValues = (weightMatrix * activationValues) + biasMatrix;
 
-                // Create tasks for each operation with dependencies
-                #pragma omp task depend(out: weightMatrix)
-                *weightMatrix = calculateWeightMatrix(prevLayer);
 
-                #pragma omp task depend(out: biasMatrix)
-                *biasMatrix = calculateBiasMatrix(currentLayer);
 
-                #pragma omp task depend(out: activationValues)
-                *activationValues = getActivationValues(prevLayer);
-
-                // Create a new task for matrix computation and neuron updates
-                #pragma omp task depend(in: weightMatrix, biasMatrix, activationValues)
-                {
-                    MatrixXd newActivationValues = (*weightMatrix * *activationValues) + *biasMatrix;
-
-                    for (size_t j = 0; j < currentLayer.size(); ++j) {
-                        currentLayer[j]->setZValue(newActivationValues(j, 0));
-                        currentLayer[j]->setActivationValue(sigmoid(newActivationValues(j, 0)));
-                    }
-
-                    // Clean up dynamically allocated memory
-                    delete weightMatrix;
-                    delete biasMatrix;
-                    delete activationValues;
-                }
-            }
+        #pragma omp parallel for
+        for (size_t j = 0; j < currentLayer.size(); ++j) {
+            double zValue = newActivationValues(j, 0);
+            currentLayer[j]->setZValue(zValue);
+            currentLayer[j]->setActivationValue(sigmoid(zValue));
         }
     }
 }
+
 
 
 void Network::backwardPropagate(double outputValue) {
     // Handle the last layer separately
 
     vector<shared_ptr<Neuron>> backLayer = layers.back();
-    int max_threads = min((int)backLayer.size(),omp_get_max_threads());
-    int chunkSize = backLayer.size()/max_threads;
-    #pragma omp parallel num_threads(max_threads)
-    {
-        int currentThread = omp_get_thread_num();
-        for (size_t i = currentThread*chunkSize; i < min((int)backLayer.size(),(currentThread+1)*chunkSize); ++i) {
-            shared_ptr<Neuron> neuron = backLayer[i];
-            double error = calculateErrorForLastNeuron(neuron, outputValue == i ? 1 : 0, backLayer.size());
-            neuron->setError(error);
-            adjustWeightsAndBiases(neuron, error);
-        }
-    }
+    calculateErrorForLastLayer(backLayer,backLayer.size(),outputValue);
 
     // Handle hidden layers
     for (int i = layers.size() - 2; i >= 1; --i) {
+        calculateErrorForHiddenLayer(layers[i]);
+        }
+
+}
+
+void Network::adjustWeightsAndBiases() {
+    for (int i = 0; i < layers.size(); i++) {
         vector<shared_ptr<Neuron>> currentLayer = layers[i];
-        max_threads = min((int)currentLayer.size(),omp_get_max_threads());
-        chunkSize = currentLayer.size()/max_threads;
-        #pragma omp parallel num_threads(max_threads)
-        {
-             int currentThread = omp_get_thread_num();
-            for (size_t i = currentThread*chunkSize; i < min((int)currentLayer.size(),(currentThread+1)*chunkSize); ++i) {
-                shared_ptr<Neuron> neuron = currentLayer[i];
-                double error = calculateErrorForHiddenLayer(neuron);
-                neuron->setError(error);
-                adjustWeightsAndBiases(neuron, error);
-            }
+
+        size_t neuronsSize = currentLayer.size();
+        size_t weightsSize = currentLayer[0]->getBackwardWeights().size();
+        size_t totalConnections = neuronsSize * weightsSize;
+
+        #pragma omp parallel for 
+        for (size_t index = 0;index < totalConnections; ++index) {
+            int i = index / weightsSize; // Neuron index
+            int j = index % weightsSize; // Weight index
+            shared_ptr<Neuron> neuron = currentLayer[i];
+            shared_ptr<Weight> weight = neuron->getBackwardWeights()[j];
+            double error = neuron->getError();
+
+
+            weight->setChangeInWeight(learningRate * error * layers[weight->getPrevNeuronLayer()][weight->getPrevNeuronIndex()]->getActivationValue());
+
+            neuron->setChangeInBias(learningRate * error);
         }
     }
-
 }
 
-void Network::adjustWeightsAndBiases(shared_ptr<Neuron>& neuron, double error) {
-    vector<shared_ptr<Weight>> backwardWeights = neuron->getBackwardWeights();
-
-    #pragma omp taskloop
-    for (shared_ptr<Weight>& weight : backwardWeights) {
-        adjustWeight(error, weight, learningRate);
-    }
-    adjustBias(error, neuron);
-}
 
 void Network::updateWeightsAndBiases() {
 
-    #pragma omp parallel
-    {
-    #pragma omp single
-    {
-        #pragma omp taskloop
-        for (vector<shared_ptr<Neuron>>& layer : layers) {
-            #pragma omp taskloop
-            for (shared_ptr<Neuron>& neuron : layer) {
-                vector<shared_ptr<Weight>> forwardWeights = neuron->getForwardWeights();
-                #pragma omp taskloop
-                for (shared_ptr<Weight>& weight : forwardWeights) {
-                    weight->setWeight(weight->getWeight() - weight->getChangeInWeight());
-                }
-                neuron->setBias(neuron->getBias() - neuron->getChangeInBias());
-            }
+    for (int i = 0; i < layers.size(); i++) {
+        vector<shared_ptr<Neuron>> currentLayer = layers[i];
+
+        size_t neuronsSize = currentLayer.size();
+
+        #pragma omp parallel for
+        for (size_t index = 0;index < neuronsSize; ++index) {
+            shared_ptr<Neuron> neuron = currentLayer[index];
+            neuron->setBias(neuron->getBias() - neuron->getChangeInBias());
         }
+
     }
-    }
+
+    #pragma omp parallel for
+    for (size_t index = 0;index < weights.size(); ++index) {
+            shared_ptr<Weight> weight = weights[index];
+            weight->setWeight(weight->getWeight()-weight->getChangeInWeight());
+        }
 }
 
 void Network::trainNetwork(vector<double> input, double outputValue) {
     initializeLayerInput(input);
     forwardPropagate();
     backwardPropagate(outputValue);
+    adjustWeightsAndBiases();
     updateWeightsAndBiases();
 }
 
@@ -301,6 +298,3 @@ vector<double> Network::getOutput(vector<double> input) {
     return output;
 }
 
-Network::Network(){
-    
-}
