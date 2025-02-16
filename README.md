@@ -93,5 +93,5 @@ This project demonstrates how low-level optimizations and parallel computing can
 
 If you want to explore the full implementation, you can find the **code and detailed explanations on GitHub** (link below). Happy coding, and let's keep pushing the boundaries of AI performance! 🚀  
 
-🔗 **[GitHub Link]** https://github.com/KshitizSareen/Neural-Network-Parallelization
+🔗 **[https://github.com/KshitizSareen/Neural-Network-Parallelization]** 
 
