@@ -17,17 +17,12 @@ The project showcases the power of forward propagation, backpropagation, and wei
 ### **Compiling the Project with g++**  
 To compile the project using **g++ (GCC 14) with OpenMP**, navigate to the project directory and run:  
 
-"`sh
- g++-14 -fopenmp main.cpp Weight.cpp Neuron.cpp Network.cpp -o program
-```
+g++-14 -fopenmp main.cpp Weight.cpp Neuron.cpp Network.cpp -o program
 
 - The `-fopenmp` flag enables **OpenMP** support.  
 - This will generate an **executable** named `program,` 
 - We can run the program using:  
-
-"`sh
  ./program
-```
 
 ---
 
@@ -49,16 +44,6 @@ For more details on installing OpenMP:
 ### **2. Eigen (for High-Performance Matrix Operations)**  
 Eigen is a powerful **C++ library** optimized for **linear algebra operations** such as matrix multiplication.
 
-**Installation Guide:**  
-1. Download the Eigen library:  
- "`sh
-   git clone https://gitlab.com/libeigen/eigen.git
- ```
-2. Move the `Eigen` folder to your project directory (or include it in your compiler's include path).  
-3. When compiling, add the `-I` flag to specify the Eigen directory:  
- "`sh
-   g++-14 -fopenmp -I /path/to/eigen main.cpp Weight.cpp Neuron.cpp Network.cpp -o program
- ```
 
 For more details on installing Eigen:  
 🔗 [Eigen Official Documentation](https://eigen.tuxfamily.org/)  
@@ -83,10 +68,8 @@ For more details on installing Eigen:
 
 ## **Usage**  
 1. **Compile the project** using the provided `g++` command.  
-2. **Run the executable** using:  
- "`sh
+2. **Run the executable** using:
    ./program
- ```
 3. The program will **train the neural network** and output training performance metrics.  
 
 ---
